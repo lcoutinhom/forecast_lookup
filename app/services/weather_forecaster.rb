@@ -7,7 +7,8 @@ class WeatherForecaster
   DailyForecast = Data.define(:date, :high, :low, :condition)
 
   ENDPOINT = URI("https://api.open-meteo.com/v1/forecast")
-  TIMEOUT_SECONDS = 5
+  OPEN_TIMEOUT_SECONDS = 3
+  READ_TIMEOUT_SECONDS = 10
   UPCOMING_DAYS = 5
   NETWORK_ERRORS = [ Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError ].freeze
   INVALID_RESPONSE_ERRORS = [ JSON::ParserError, KeyError, TypeError, ArgumentError ].freeze
@@ -53,7 +54,7 @@ class WeatherForecaster
   private
 
   def fetch_data
-    response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: TIMEOUT_SECONDS, read_timeout: TIMEOUT_SECONDS) do |http|
+    response = Net::HTTP.start(ENDPOINT.host, ENDPOINT.port, use_ssl: true, open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS) do |http|
       http.get(forecast_uri.request_uri)
     end
     raise Error, "The weather service returned an unexpected response." unless response.is_a?(Net::HTTPSuccess)
