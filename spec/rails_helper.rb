@@ -8,6 +8,7 @@ require "webmock/rspec"
 RSpec.configure do |config|
   config.use_active_record = false
   config.filter_rails_from_backtrace!
+  config.include ActiveSupport::Testing::TimeHelpers
 
   config.before do
     Rails.cache.clear
