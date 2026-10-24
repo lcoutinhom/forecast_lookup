@@ -8,3 +8,117 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+:root {
+  --text: #1f2933;
+  --muted: #616e7c;
+  --border: #d9dee3;
+  --accent: #2563eb;
+  --error-bg: #fdecec;
+  --error-text: #9b1c1c;
+  --notice-bg: #eef4ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--text);
+  background: #f7f8fa;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.search label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.search input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.search input[type="submit"] {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.error {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.result {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.result h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.zip,
+.cached {
+  margin: 0.25rem 0;
+  color: var(--muted);
+}
+
+.cached {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: var(--notice-bg);
+  font-size: 0.9rem;
+}
+
+.current p {
+  margin: 0.25rem 0;
+}
+
+.current-temperature {
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+.upcoming {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-collapse: collapse;
+}
+
+.upcoming th,
+.upcoming td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}

@@ -1,0 +1,39 @@
+<section class="result">
+  <% if result.cached %>
+    <p class="cached"><%= cached_notice(result.fetched_at) %></p>
+  <% end %>
+
+  <h2><%= result.location.display_name %></h2>
+  <p class="zip">Zip code: <%= result.location.zip_code %></p>
+
+  <div class="current">
+    <p class="current-temperature"><%= temperature(result.forecast.current_temperature) %></p>
+    <p><%= result.forecast.current_condition %></p>
+    <p>
+      High <%= temperature(result.forecast.today_high) %>
+      &middot;
+      Low <%= temperature(result.forecast.today_low) %>
+    </p>
+  </div>
+
+  <table class="upcoming">
+    <thead>
+      <tr>
+        <th>Day</th>
+        <th>Condition</th>
+        <th>High</th>
+        <th>Low</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% result.forecast.upcoming_days.each do |day| %>
+        <tr>
+          <td><%= forecast_day(day.date) %></td>
+          <td><%= day.condition %></td>
+          <td><%= temperature(day.high) %></td>
+          <td><%= temperature(day.low) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

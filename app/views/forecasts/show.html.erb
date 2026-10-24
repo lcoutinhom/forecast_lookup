@@ -1,0 +1,17 @@
+<main class="page">
+  <h1>Forecast Lookup</h1>
+
+  <% if @error %>
+    <p class="error" role="alert"><%= @error %></p>
+  <% end %>
+
+  <%= form_with url: root_path, method: :get, class: "search" do |form| %>
+    <%= form.label :address, "Address" %>
+    <div class="search-row">
+      <%= form.search_field :address, value: @address, placeholder: "Avenida Paulista 1578, Sao Paulo", autofocus: true %>
+      <%= form.submit "Search", name: nil %>
+    </div>
+  <% end %>
+
+  <%= render "result", result: @result if @result %>
+</main>
