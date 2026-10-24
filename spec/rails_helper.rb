@@ -5,10 +5,13 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require "rspec/rails"
 require "webmock/rspec"
 
+Rails.root.glob("spec/support/**/*.rb").each { |file| require file }
+
 RSpec.configure do |config|
   config.use_active_record = false
   config.filter_rails_from_backtrace!
   config.include ActiveSupport::Testing::TimeHelpers
+  config.include ForecastFixtures
 
   config.before do
     Rails.cache.clear

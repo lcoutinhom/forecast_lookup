@@ -10,7 +10,8 @@ class WeatherForecaster
   TIMEOUT_SECONDS = 5
   UPCOMING_DAYS = 5
   NETWORK_ERRORS = [ Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError ].freeze
-  INVALID_RESPONSE_ERRORS = [ JSON::ParserError, KeyError, TypeError, ArgumentError, NoMethodError ].freeze
+  INVALID_RESPONSE_ERRORS = [ JSON::ParserError, KeyError, TypeError, ArgumentError ].freeze
+  UNAVAILABLE_MESSAGE = "The weather service is unavailable. Please try again later."
 
   CONDITIONS = {
     [ 0 ] => "Clear sky",
@@ -46,7 +47,7 @@ class WeatherForecaster
   def call
     build_forecast(fetch_data)
   rescue *NETWORK_ERRORS, *INVALID_RESPONSE_ERRORS
-    raise Error, "The weather service is unavailable. Please try again later."
+    raise Error, UNAVAILABLE_MESSAGE
   end
 
   private
@@ -77,6 +78,7 @@ class WeatherForecaster
   def build_forecast(data)
     current = data.fetch("current")
     today, *upcoming_days = daily_forecasts(data.fetch("daily"))
+    raise Error, UNAVAILABLE_MESSAGE if today.nil?
 
     Forecast.new(
       current_temperature: Float(current.fetch("temperature_2m")),

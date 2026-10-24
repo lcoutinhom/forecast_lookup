@@ -1,9 +1,17 @@
 require "rails_helper"
 
 RSpec.describe AddressGeocoder do
-  let(:address) { "1600 Amphitheatre Parkway, Mountain View, CA" }
+  let(:address) { "Avenida Paulista 1578, Sao Paulo" }
   let(:search_url) { "https://nominatim.openstreetmap.org/search" }
   let(:search_query) { { q: address, format: "json", addressdetails: "1", limit: "1" } }
+  let(:search_result) do
+    {
+      "lat" => "-23.5616836",
+      "lon" => "-46.6565685",
+      "display_name" => "Avenida Paulista, 1578, Bela Vista, Sao Paulo, 01311-200, Brasil",
+      "address" => { "postcode" => "01311-200", "country_code" => "br" }
+    }
+  end
 
   def stub_search(body:, status: 200)
     stub_request(:get, search_url)
@@ -11,26 +19,15 @@ RSpec.describe AddressGeocoder do
       .to_return(status: status, body: body.to_json, headers: { "Content-Type" => "application/json" })
   end
 
-  def search_result(postcode: "94043")
-    {
-      "lat" => "37.4224857",
-      "lon" => "-122.0855846",
-      "display_name" => "Google Building 41, 1600, Amphitheatre Parkway, Mountain View, California, 94043, United States",
-      "address" => { "postcode" => postcode, "country_code" => "us" }.compact
-    }
-  end
-
   it "returns the location of the address" do
     stub_search(body: [ search_result ])
 
-    location = described_class.call(address)
-
-    expect(location).to have_attributes(
-      latitude: 37.4224857,
-      longitude: -122.0855846,
-      zip_code: "94043",
-      country_code: "us",
-      display_name: a_string_starting_with("Google Building 41")
+    expect(described_class.call(address)).to have_attributes(
+      latitude: -23.5616836,
+      longitude: -46.6565685,
+      zip_code: "01311-200",
+      country_code: "br",
+      display_name: "Avenida Paulista, 1578, Bela Vista, Sao Paulo, 01311-200, Brasil"
     )
   end
 
@@ -42,10 +39,18 @@ RSpec.describe AddressGeocoder do
   end
 
   it "raises AddressNotFound when the result has no postcode" do
-    stub_search(body: [ search_result(postcode: nil) ])
+    search_result["address"].delete("postcode")
+    stub_search(body: [ search_result ])
 
     expect { described_class.call(address) }
-      .to raise_error(AddressGeocoder::AddressNotFound, /no zip code/)
+      .to raise_error(AddressGeocoder::AddressNotFound, "That address has no zip code. Try a more specific address.")
+  end
+
+  it "raises ServiceUnavailable on a non-success response" do
+    stub_search(body: { error: "Too many requests" }, status: 429)
+
+    expect { described_class.call(address) }
+      .to raise_error(AddressGeocoder::ServiceUnavailable, "The address lookup service is unavailable. Please try again later.")
   end
 
   it "raises ServiceUnavailable on timeout" do
@@ -56,12 +61,6 @@ RSpec.describe AddressGeocoder do
 
   it "raises ServiceUnavailable when the connection fails" do
     stub_request(:get, search_url).with(query: search_query).to_raise(SocketError)
-
-    expect { described_class.call(address) }.to raise_error(AddressGeocoder::ServiceUnavailable)
-  end
-
-  it "raises ServiceUnavailable on a non-success response" do
-    stub_search(body: { error: "Too many requests" }, status: 429)
 
     expect { described_class.call(address) }.to raise_error(AddressGeocoder::ServiceUnavailable)
   end

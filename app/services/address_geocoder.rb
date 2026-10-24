@@ -11,6 +11,7 @@ class AddressGeocoder
   USER_AGENT = "forecast_lookup/1.0 (Rails take-home project)"
   TIMEOUT_SECONDS = 5
   NETWORK_ERRORS = [ Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, JSON::ParserError ].freeze
+  UNAVAILABLE_MESSAGE = "The address lookup service is unavailable. Please try again later."
 
   def self.call(address)
     new(address).call
@@ -31,11 +32,11 @@ class AddressGeocoder
 
   def search
     response = fetch
-    raise ServiceUnavailable, unavailable_message unless response.is_a?(Net::HTTPSuccess)
+    raise ServiceUnavailable, UNAVAILABLE_MESSAGE unless response.is_a?(Net::HTTPSuccess)
 
     JSON.parse(response.body)
   rescue *NETWORK_ERRORS
-    raise ServiceUnavailable, unavailable_message
+    raise ServiceUnavailable, UNAVAILABLE_MESSAGE
   end
 
   def fetch
@@ -62,9 +63,5 @@ class AddressGeocoder
       country_code: address["country_code"],
       display_name: result["display_name"]
     )
-  end
-
-  def unavailable_message
-    "The address lookup service is unavailable. Please try again later."
   end
 end

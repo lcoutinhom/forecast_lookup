@@ -1,6 +1,7 @@
 require "rails_helper"
 
 RSpec.describe WeatherForecaster do
+  let(:coordinates) { { latitude: -23.56, longitude: -46.66 } }
   let(:forecast_url) { "https://api.open-meteo.com/v1/forecast" }
   let(:forecast_query) do
     {
@@ -24,6 +25,7 @@ RSpec.describe WeatherForecaster do
       }
     }
   end
+  let(:unavailable_message) { "The weather service is unavailable. Please try again later." }
 
   def stub_forecast(body:, status: 200)
     stub_request(:get, forecast_url)
@@ -31,14 +33,10 @@ RSpec.describe WeatherForecaster do
       .to_return(status: status, body: body, headers: { "Content-Type" => "application/json" })
   end
 
-  def call_forecaster
-    described_class.call(latitude: -23.56, longitude: -46.66)
-  end
-
   it "returns the current weather and today's range" do
     stub_forecast(body: forecast_body.to_json)
 
-    expect(call_forecaster).to have_attributes(
+    expect(described_class.call(**coordinates)).to have_attributes(
       current_temperature: 24.9,
       current_condition: "Drizzle",
       today_high: 24.9,
@@ -49,7 +47,7 @@ RSpec.describe WeatherForecaster do
   it "returns the next five days" do
     stub_forecast(body: forecast_body.to_json)
 
-    upcoming_days = call_forecaster.upcoming_days
+    upcoming_days = described_class.call(**coordinates).upcoming_days
 
     expect(upcoming_days.map(&:date)).to eq((Date.new(2026, 10, 25)..Date.new(2026, 10, 29)).to_a)
     expect(upcoming_days.map(&:condition)).to eq([ "Thunderstorm with hail", "Clear sky", "Overcast", "Fog", "Unknown" ])
@@ -59,30 +57,38 @@ RSpec.describe WeatherForecaster do
   it "raises Error on a non-success response" do
     stub_forecast(body: { error: true, reason: "Invalid latitude" }.to_json, status: 400)
 
-    expect { call_forecaster }.to raise_error(WeatherForecaster::Error)
+    expect { described_class.call(**coordinates) }
+      .to raise_error(WeatherForecaster::Error, "The weather service returned an unexpected response.")
   end
 
   it "raises Error on timeout" do
     stub_request(:get, forecast_url).with(query: forecast_query).to_timeout
 
-    expect { call_forecaster }.to raise_error(WeatherForecaster::Error)
+    expect { described_class.call(**coordinates) }.to raise_error(WeatherForecaster::Error, unavailable_message)
   end
 
   it "raises Error when the connection fails" do
     stub_request(:get, forecast_url).with(query: forecast_query).to_raise(Errno::ECONNREFUSED)
 
-    expect { call_forecaster }.to raise_error(WeatherForecaster::Error)
+    expect { described_class.call(**coordinates) }.to raise_error(WeatherForecaster::Error, unavailable_message)
   end
 
   it "raises Error when the body is not JSON" do
     stub_forecast(body: "<html>Bad gateway</html>")
 
-    expect { call_forecaster }.to raise_error(WeatherForecaster::Error)
+    expect { described_class.call(**coordinates) }.to raise_error(WeatherForecaster::Error, unavailable_message)
   end
 
   it "raises Error when expected fields are missing" do
     stub_forecast(body: { "current" => {} }.to_json)
 
-    expect { call_forecaster }.to raise_error(WeatherForecaster::Error)
+    expect { described_class.call(**coordinates) }.to raise_error(WeatherForecaster::Error, unavailable_message)
+  end
+
+  it "raises Error when there are no daily forecasts" do
+    forecast_body["daily"].transform_values!(&:clear)
+    stub_forecast(body: forecast_body.to_json)
+
+    expect { described_class.call(**coordinates) }.to raise_error(WeatherForecaster::Error, unavailable_message)
   end
 end
