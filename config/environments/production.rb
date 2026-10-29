@@ -40,6 +40,12 @@ Rails.application.configure do
   # Prevent health checks from clogging up the logs.
   config.silence_healthcheck_path = "/up"
 
+  # Share cached forecasts and locations between Puma workers through the cache database.
+  config.cache_store = :solid_cache_store
+
+  # Do not dump schema after migrations.
+  config.active_record.dump_schema_after_migration = false
+
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 

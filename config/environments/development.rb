@@ -25,6 +25,9 @@ Rails.application.configure do
     config.action_controller.perform_caching = false
   end
 
+  # Cache forecasts and locations in process memory; they are lost on restart.
+  config.cache_store = :memory_store
+
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
 
