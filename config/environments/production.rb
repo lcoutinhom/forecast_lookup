@@ -22,10 +22,11 @@ Rails.application.configure do
   # config.asset_host = "http://assets.example.com"
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  config.assume_ssl = true
+  # Set RAILS_SSL=false to serve plain HTTP, as compose.yaml does for local runs.
+  config.assume_ssl = ENV.fetch("RAILS_SSL", "true") == "true"
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  config.force_ssl = ENV.fetch("RAILS_SSL", "true") == "true"
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
@@ -39,6 +40,12 @@ Rails.application.configure do
 
   # Prevent health checks from clogging up the logs.
   config.silence_healthcheck_path = "/up"
+
+  # Share cached forecasts and locations between Puma workers through the cache database.
+  config.cache_store = :solid_cache_store
+
+  # Do not dump schema after migrations.
+  config.active_record.dump_schema_after_migration = false
 
   # Don't log any deprecations.
   config.active_support.report_deprecations = false

@@ -12,6 +12,7 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ForecastFixtures
+  config.include HttpStubs
 
   config.before do
     Rails.cache.clear

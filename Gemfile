@@ -4,6 +4,10 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.4"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
+# Use sqlite3 as the database for Solid Cache in production
+gem "sqlite3", ">= 2.1"
+# Database-backed Rails.cache shared by every Puma worker [https://github.com/rails/solid_cache]
+gem "solid_cache"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]

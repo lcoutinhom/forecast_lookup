@@ -1,0 +1,25 @@
+# The app stores no records. The only tables are the Solid Cache entries in the
+# production cache database, which `bin/rails db:prepare` creates from db/cache_schema.rb.
+# Development and test cache in memory (see config/environments); Active Record still
+# requires a configuration for every environment, so those databases stay empty.
+default: &default
+  adapter: sqlite3
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 } %>
+  timeout: 5000
+
+development:
+  <<: *default
+  database: storage/development.sqlite3
+
+test:
+  <<: *default
+  database: storage/test.sqlite3
+
+production:
+  primary:
+    <<: *default
+    database: storage/production.sqlite3
+  cache:
+    <<: *default
+    database: storage/production_cache.sqlite3
+    migrations_paths: db/cache_migrate

@@ -25,3 +25,7 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# Ignore the SQLite databases, but keep the directory.
+/storage/*
+!/storage/.keep

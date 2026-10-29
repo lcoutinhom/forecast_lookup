@@ -38,12 +38,45 @@ RSpec.describe AddressGeocoder do
       .to raise_error(AddressGeocoder::AddressNotFound, "We could not find that address.")
   end
 
-  it "raises AddressNotFound when the result has no postcode" do
+  it "returns a location without a zip code when the result has no postcode" do
     search_result["address"].delete("postcode")
     stub_search(body: [ search_result ])
 
-    expect { described_class.call(address) }
-      .to raise_error(AddressGeocoder::AddressNotFound, "That address has no zip code. Try a more specific address.")
+    expect(described_class.call(address)).to have_attributes(latitude: -23.5616836, longitude: -46.6565685, zip_code: nil)
+  end
+
+  it "treats a blank postcode as no zip code" do
+    search_result["address"]["postcode"] = " "
+    stub_search(body: [ search_result ])
+
+    expect(described_class.call(address).zip_code).to be_nil
+  end
+
+  it "returns a location when the result has no address details" do
+    search_result.delete("address")
+    stub_search(body: [ search_result ])
+
+    expect(described_class.call(address)).to have_attributes(zip_code: nil, country_code: nil)
+  end
+
+  [
+    [ "missing", nil ],
+    [ "not a number", "north" ],
+    [ "out of range", "91.5" ],
+    [ "not finite", "NaN" ]
+  ].each do |description, latitude|
+    it "raises AddressNotFound when the latitude is #{description}" do
+      stub_search(body: [ search_result.merge("lat" => latitude) ])
+
+      expect { described_class.call(address) }
+        .to raise_error(AddressGeocoder::AddressNotFound, "We could not find that address.")
+    end
+  end
+
+  it "raises AddressNotFound when the longitude is out of range" do
+    stub_search(body: [ search_result.merge("lon" => "-180.01") ])
+
+    expect { described_class.call(address) }.to raise_error(AddressGeocoder::AddressNotFound)
   end
 
   it "raises ServiceUnavailable on a non-success response" do
