@@ -1,23 +1,37 @@
 class ForecastsController < ApplicationController
+  rescue_from ActionController::ParameterMissing do
+    render_error("Please enter an address.", :bad_request)
+  end
+
+  rescue_from AddressGeocoder::AddressNotFound do |error|
+    render_error(error.message, :not_found)
+  end
+
+  rescue_from AddressGeocoder::ServiceUnavailable, WeatherForecaster::Error do |error|
+    render_error(error.message, :service_unavailable)
+  end
+
   def show
     @address = params[:address].to_s.strip
-    search if params.key?(:address)
+
+    respond_to do |format|
+      format.html { @result = search if params.key?(:address) }
+      format.json { render json: search }
+    end
   end
 
   private
 
   def search
-    return render_error("Please enter an address.", :unprocessable_content) if @address.blank?
-
-    @result = ForecastSearch.call(@address)
-  rescue AddressGeocoder::AddressNotFound => error
-    render_error(error.message, :unprocessable_content)
-  rescue AddressGeocoder::ServiceUnavailable, WeatherForecaster::Error => error
-    render_error(error.message, :service_unavailable)
+    ForecastSearch.call(params.expect(:address).strip)
   end
 
   def render_error(message, status)
     @error = message
-    render :show, status: status
+
+    respond_to do |format|
+      format.html { render :show, status: status }
+      format.json { render json: { error: message }, status: status }
+    end
   end
 end
