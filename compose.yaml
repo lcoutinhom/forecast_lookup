@@ -1,0 +1,24 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # Passed through from your shell when exported; otherwise bin/docker-entrypoint
+      # generates a temporary key.
+      SECRET_KEY_BASE:
+      # Serve plain HTTP on localhost instead of redirecting to HTTPS.
+      RAILS_SSL: "false"
+      RAILS_LOG_LEVEL: ${RAILS_LOG_LEVEL:-info}
+    volumes:
+      # Keeps the Solid Cache database across restarts.
+      - storage:/rails/storage
+
+  test:
+    build:
+      context: .
+      target: test
+    profiles: [ test ]
+
+volumes:
+  storage:

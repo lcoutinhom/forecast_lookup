@@ -1,0 +1,22 @@
+#!/bin/bash -e
+
+# Enable jemalloc for reduced memory usage and latency.
+if [ -z "${LD_PRELOAD+x}" ]; then
+  LD_PRELOAD=$(find /usr/lib -name libjemalloc.so.2 -print -quit)
+  export LD_PRELOAD
+fi
+
+# The app keeps no sessions or other signed data that must survive a restart, so a
+# local run without SECRET_KEY_BASE gets a throw-away key. Real deployments set one.
+if [ -z "${SECRET_KEY_BASE}" ]; then
+  echo "SECRET_KEY_BASE is not set; generating a temporary key for this container." >&2
+  SECRET_KEY_BASE=$(ruby -rsecurerandom -e 'print SecureRandom.hex(64)')
+  export SECRET_KEY_BASE
+fi
+
+# Create the databases and load the Solid Cache schema before starting the server.
+if [ "${1}" == "./bin/rails" ] && [ "${2}" == "server" ]; then
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"
