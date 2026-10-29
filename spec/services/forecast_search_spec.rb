@@ -72,6 +72,14 @@ RSpec.describe ForecastSearch do
     expect(forecaster).to have_received(:call).twice
   end
 
+  it "caches the forecast of a location without a zip code by its coordinates" do
+    allow(geocoder).to receive(:call).with("Sahara").and_return(build_location(zip_code: nil, latitude: 23.4162, longitude: 25.6628))
+
+    search("Sahara")
+
+    expect(cache.exist?("forecast/coords/23.42_25.66")).to be(true)
+  end
+
   it "propagates geocoding errors without fetching a forecast" do
     allow(geocoder).to receive(:call).with("Nowhere").and_raise(AddressGeocoder::AddressNotFound, "We could not find that address.")
 
@@ -101,6 +109,39 @@ RSpec.describe ForecastSearch do
       location = build_location(zip_code: " sw1a 1aa ", country_code: "GB")
 
       expect(described_class.cache_key_for(location)).to eq("forecast/gb/SW1A1AA")
+    end
+
+    it "gives the same zip code in different countries different keys" do
+      brazil = described_class.cache_key_for(build_location(zip_code: "1000", country_code: "br"))
+      belgium = described_class.cache_key_for(build_location(zip_code: "1000", country_code: "be"))
+
+      expect(brazil).not_to eq(belgium)
+    end
+
+    it "falls back to coordinates rounded to two decimals when there is no zip code" do
+      location = build_location(zip_code: nil, latitude: 40.712776, longitude: -74.005974)
+
+      expect(described_class.cache_key_for(location)).to eq("forecast/coords/40.71_-74.01")
+    end
+
+    it "falls back to coordinates when the zip code has no letters or digits" do
+      location = build_location(zip_code: " - ", latitude: 1.0, longitude: 2.0)
+
+      expect(described_class.cache_key_for(location)).to eq("forecast/coords/1.00_2.00")
+    end
+
+    it "falls back to coordinates when the country code is missing" do
+      location = build_location(country_code: nil, latitude: 1.0, longitude: 2.0)
+
+      expect(described_class.cache_key_for(location)).to eq("forecast/coords/1.00_2.00")
+    end
+
+    it "gives nearby coordinates the same key, including across the equator and Greenwich" do
+      first = described_class.cache_key_for(build_location(zip_code: nil, latitude: 0.001, longitude: -0.001))
+      second = described_class.cache_key_for(build_location(zip_code: nil, latitude: -0.001, longitude: 0.001))
+
+      expect(first).to eq("forecast/coords/0.00_0.00")
+      expect(second).to eq(first)
     end
   end
 end

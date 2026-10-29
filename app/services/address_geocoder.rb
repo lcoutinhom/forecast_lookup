@@ -13,6 +13,9 @@ class AddressGeocoder
   READ_TIMEOUT_SECONDS = 10
   NETWORK_ERRORS = [ Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, JSON::ParserError ].freeze
   UNAVAILABLE_MESSAGE = "The address lookup service is unavailable. Please try again later."
+  NOT_FOUND_MESSAGE = "We could not find that address."
+  LATITUDE_RANGE = -90.0..90.0
+  LONGITUDE_RANGE = -180.0..180.0
 
   def self.call(address)
     new(address).call
@@ -24,7 +27,7 @@ class AddressGeocoder
 
   def call
     result = search.first
-    raise AddressNotFound, "We could not find that address." if result.nil?
+    raise AddressNotFound, NOT_FOUND_MESSAGE if result.nil?
 
     build_location(result)
   end
@@ -53,16 +56,21 @@ class AddressGeocoder
   end
 
   def build_location(result)
-    address = result.fetch("address", {})
-    zip_code = address["postcode"]
-    raise AddressNotFound, "That address has no zip code. Try a more specific address." if zip_code.blank?
+    address = result["address"] || {}
 
     Location.new(
-      latitude: Float(result["lat"]),
-      longitude: Float(result["lon"]),
-      zip_code: zip_code,
+      latitude: coordinate(result["lat"], LATITUDE_RANGE),
+      longitude: coordinate(result["lon"], LONGITUDE_RANGE),
+      zip_code: address["postcode"].presence,
       country_code: address["country_code"],
       display_name: result["display_name"]
     )
+  end
+
+  def coordinate(value, range)
+    number = Float(value, exception: false)
+    raise AddressNotFound, NOT_FOUND_MESSAGE unless number&.finite? && range.cover?(number)
+
+    number
   end
 end

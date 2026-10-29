@@ -4,7 +4,9 @@
   <% end %>
 
   <h2><%= result.location.display_name %></h2>
-  <p class="zip">Zip code: <%= result.location.zip_code %></p>
+  <% if result.location.zip_code %>
+    <p class="zip">Zip code: <%= result.location.zip_code %></p>
+  <% end %>
 
   <div class="current">
     <p class="current-temperature"><%= temperature(result.forecast.current_temperature) %></p>

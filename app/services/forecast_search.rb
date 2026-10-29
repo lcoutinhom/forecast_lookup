@@ -10,8 +10,20 @@ class ForecastSearch
   def self.cache_key_for(location)
     zip_code = location.zip_code.to_s.upcase.gsub(/[^0-9A-Z]/, "")
     country_code = location.country_code.to_s.downcase
-    "forecast/#{country_code}/#{zip_code}"
+
+    if zip_code.present? && country_code.present?
+      "forecast/#{country_code}/#{zip_code}"
+    else
+      "forecast/coords/#{rounded_coordinate(location.latitude)}_#{rounded_coordinate(location.longitude)}"
+    end
   end
+
+  # Adding 0.0 turns -0.0 into 0.0, so points just west of Greenwich or south of the
+  # equator share a key with their neighbors on the other side.
+  def self.rounded_coordinate(value)
+    format("%.2f", Float(value).round(2) + 0.0)
+  end
+  private_class_method :rounded_coordinate
 
   def initialize(address, geocoder: AddressGeocoder, forecaster: WeatherForecaster, cache: Rails.cache)
     @address = address
