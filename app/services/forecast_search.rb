@@ -3,8 +3,8 @@ class ForecastSearch
 
   Result = Data.define(:location, :forecast, :fetched_at, :cached)
 
-  def self.call(address)
-    new(address).call
+  def self.call(address, **dependencies)
+    new(address, **dependencies).call
   end
 
   def self.cache_key_for(location)
@@ -13,14 +13,17 @@ class ForecastSearch
     "forecast/#{country_code}/#{zip_code}"
   end
 
-  def initialize(address)
+  def initialize(address, geocoder: AddressGeocoder, forecaster: WeatherForecaster, cache: Rails.cache)
     @address = address
+    @geocoder = geocoder
+    @forecaster = forecaster
+    @cache = cache
   end
 
   def call
-    location = AddressGeocoder.call(@address)
+    location = @geocoder.call(@address)
     cached = true
-    entry = Rails.cache.fetch(self.class.cache_key_for(location), expires_in: CACHE_TTL) do
+    entry = @cache.fetch(self.class.cache_key_for(location), expires_in: CACHE_TTL) do
       cached = false
       fetch_forecast(location)
     end
@@ -31,7 +34,7 @@ class ForecastSearch
   private
 
   def fetch_forecast(location)
-    forecast = WeatherForecaster.call(latitude: location.latitude, longitude: location.longitude)
+    forecast = @forecaster.call(latitude: location.latitude, longitude: location.longitude)
     { forecast: forecast, fetched_at: Time.current }
   end
 end
