@@ -1,5 +1,8 @@
+require "digest"
+
 class ForecastSearch
   CACHE_TTL = 30.minutes
+  GEOCODE_CACHE_TTL = 24.hours
 
   Result = Data.define(:location, :forecast, :fetched_at, :cached)
 
@@ -18,6 +21,10 @@ class ForecastSearch
     end
   end
 
+  def self.geocode_cache_key_for(address)
+    "geocode/#{Digest::SHA256.hexdigest(address.squish.downcase)}"
+  end
+
   # Adding 0.0 turns -0.0 into 0.0, so points just west of Greenwich or south of the
   # equator share a key with their neighbors on the other side.
   def self.rounded_coordinate(value)
@@ -33,7 +40,7 @@ class ForecastSearch
   end
 
   def call
-    location = @geocoder.call(@address)
+    location = geocode
     cached = true
     entry = @cache.fetch(self.class.cache_key_for(location), expires_in: CACHE_TTL) do
       cached = false
@@ -44,6 +51,13 @@ class ForecastSearch
   end
 
   private
+
+  # A failed lookup raises inside the block, so nothing is written to the cache.
+  def geocode
+    @cache.fetch(self.class.geocode_cache_key_for(@address), expires_in: GEOCODE_CACHE_TTL) do
+      @geocoder.call(@address)
+    end
+  end
 
   def fetch_forecast(location)
     forecast = @forecaster.call(latitude: location.latitude, longitude: location.longitude)

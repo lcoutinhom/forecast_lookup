@@ -104,6 +104,62 @@ RSpec.describe ForecastSearch do
     expect(Rails.cache.exist?(described_class.cache_key_for(result.location))).to be(true)
   end
 
+  describe "geocoding cache" do
+    it "geocodes an address only once while it is cached" do
+      search
+      search
+
+      expect(geocoder).to have_received(:call).once
+    end
+
+    it "shares the entry between spellings that differ only in case and whitespace" do
+      search
+      search("  avenida paulista   1578, SAO PAULO ")
+
+      expect(geocoder).to have_received(:call).once
+    end
+
+    it "geocodes different addresses separately" do
+      search
+      search(neighbor_address)
+
+      expect(geocoder).to have_received(:call).twice
+    end
+
+    it "keeps the location for 24 hours" do
+      travel_to(Time.zone.local(2026, 10, 24, 12, 0)) { search }
+      travel_to(Time.zone.local(2026, 10, 25, 11, 59)) { search }
+
+      expect(geocoder).to have_received(:call).once
+    end
+
+    it "geocodes again after the entry expires" do
+      travel_to(Time.zone.local(2026, 10, 24, 12, 0)) { search }
+      travel_to(Time.zone.local(2026, 10, 25, 12, 1)) { search }
+
+      expect(geocoder).to have_received(:call).twice
+    end
+
+    it "does not cache failed lookups" do
+      allow(geocoder).to receive(:call).with("Nowhere").and_raise(AddressGeocoder::ServiceUnavailable)
+
+      2.times { expect { search("Nowhere") }.to raise_error(AddressGeocoder::ServiceUnavailable) }
+
+      expect(geocoder).to have_received(:call).with("Nowhere").twice
+      expect(cache.exist?(described_class.geocode_cache_key_for("Nowhere"))).to be(false)
+    end
+
+    it "reports a fresh forecast when only the location came from the cache" do
+      travel_to(Time.zone.local(2026, 10, 24, 12, 0)) { search }
+
+      result = travel_to(Time.zone.local(2026, 10, 24, 12, 31)) { search }
+
+      expect(result.cached).to be(false)
+      expect(geocoder).to have_received(:call).once
+      expect(forecaster).to have_received(:call).twice
+    end
+  end
+
   describe ".cache_key_for" do
     it "builds the key from the normalized zip code and country code" do
       location = build_location(zip_code: " sw1a 1aa ", country_code: "GB")
@@ -142,6 +198,12 @@ RSpec.describe ForecastSearch do
 
       expect(first).to eq("forecast/coords/0.00_0.00")
       expect(second).to eq(first)
+    end
+  end
+
+  describe ".geocode_cache_key_for" do
+    it "hashes the normalized address with SHA-256" do
+      expect(described_class.geocode_cache_key_for(" Main  St ")).to eq("geocode/#{Digest::SHA256.hexdigest("main st")}")
     end
   end
 end
